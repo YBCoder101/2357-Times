@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Study Timetable",
+    "slug": "study-timetable",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F3F4F6"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourname.studytimetable"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F3F4F6"
+      },
+      "package": "com.yourname.studytimetable"
+    },
+    "scheme": "study-timetable",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

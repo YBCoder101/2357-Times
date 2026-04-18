@@ -1,5 +1,4 @@
-// components/DayDetail.jsx
-// Shows the revision sessions / exams for a tapped calendar day
+
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';

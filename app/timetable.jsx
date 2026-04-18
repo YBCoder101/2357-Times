@@ -1,5 +1,4 @@
-// app/timetable.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,24 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Calendar } from 'react-native-calendars';
-import { useExams } from '../hooks/useExams';
-import DayDetail from '../components/SessionTag';
+} from "react-native";
+import { Calendar } from "react-native-calendars";
+import { useRouter } from "expo-router";
+import { useExams } from "../hooks/useExams";
 import {
   generateSessions,
   toCalendarMarking,
   todayString,
-  countSessions,
-  EXAM_COLORS,
-} from '../utils/timetableLogic';
-
-const STAT_COLORS = [
-  { bg: '#EDE9FE', text: '#7C3AED' },
-  { bg: '#D1FAE5', text: '#059669' },
-  { bg: '#FEF3C7', text: '#D97706' },
-];
+} from "../utils/timetableLogic";
 
 export default function TimetableScreen() {
   const router = useRouter();
@@ -32,202 +22,224 @@ export default function TimetableScreen() {
   const [selectedDate, setSelectedDate] = useState(todayString());
 
   const sessions = useMemo(() => generateSessions(validExams), [validExams]);
+
+  const sortedSessions = useMemo(() => {
+    return Object.entries(sessions).sort(([a], [b]) =>
+      a.localeCompare(b)
+    );
+  }, [sessions]);
+
+  const todaySessions = sessions[todayString()] || [];
+  const nextSession = sortedSessions[0];
+
   const marking = useMemo(() => {
     const m = toCalendarMarking(sessions);
     const selected = m[selectedDate] || {};
-    m[selectedDate] = { ...selected, selected: true, selectedColor: '#1C1917' };
+    m[selectedDate] = { ...selected, selected: true, selectedColor: "#111" };
     return m;
   }, [sessions, selectedDate]);
 
-  const totalSessions = countSessions(sessions);
-  const uniqueStudyDays = new Set(
-    Object.entries(sessions)
-      .filter(([, entries]) => entries.some(e => e.type === 'session'))
-      .map(([date]) => date)
-  ).size;
-
-  const stats = [
-    { val: validExams.length, label: 'exams', emoji: '📝' },
-    { val: totalSessions, label: 'sessions', emoji: '📖' },
-    { val: uniqueStudyDays, label: 'study days', emoji: '📅' },
-  ];
-
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.container}>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>Your timetable</Text>
-            <Text style={styles.titleEmoji}>🗓️</Text>
-          </View>
-          <Text style={styles.subtitle}>Tap any day to see your sessions</Text>
-        </View>
+        <Header />
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          {stats.map((s, i) => (
-            <View key={i} style={[styles.statCard, { backgroundColor: STAT_COLORS[i].bg }]}>
-              <Text style={styles.statEmoji}>{s.emoji}</Text>
-              <Text style={styles.statVal}>{s.val}</Text>
-              <Text style={[styles.statLbl, { color: STAT_COLORS[i].text }]}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
+        <TodayCard sessions={todaySessions} />
 
-        {/* Legend */}
-        <View style={styles.legendWrap}>
-          <Text style={styles.legendTitle}>LEGEND</Text>
-          <View style={styles.legend}>
-            {validExams.map((exam, i) => (
-              <View key={exam.id} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: EXAM_COLORS[i % EXAM_COLORS.length].exam }]} />
-                <Text style={styles.legendText} numberOfLines={1}>{exam.name}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        {nextSession && <NextCard session={nextSession} />}
 
-        {/* Calendar */}
-        <View style={styles.calendarWrap}>
-          <Calendar
-            markingType="multi-dot"
-            markedDates={marking}
-            onDayPress={day => setSelectedDate(day.dateString)}
-            current={todayString()}
-            theme={{
-              backgroundColor: '#FFFFFF',
-              calendarBackground: '#FFFFFF',
-              textSectionTitleColor: '#A8A29E',
-              selectedDayBackgroundColor: '#1C1917',
-              selectedDayTextColor: '#FFFFFF',
-              todayTextColor: '#7C3AED',
-              todayBackgroundColor: '#EDE9FE',
-              dayTextColor: '#1C1917',
-              textDisabledColor: '#D6D3D1',
-              arrowColor: '#1C1917',
-              monthTextColor: '#1C1917',
-              textMonthFontWeight: '800',
-              textDayFontWeight: '600',
-              textDayFontSize: 14,
-              textMonthFontSize: 17,
-              textDayHeaderFontSize: 12,
-              textDayHeaderFontWeight: '700',
-            }}
-            style={styles.calendar}
-          />
-        </View>
+        <CalendarCard
+          marking={marking}
+          onSelect={setSelectedDate}
+        />
 
-        {/* Day detail */}
-        <DayDetail date={selectedDate} sessions={sessions} />
-
-        {/* Upcoming list */}
-        <Text style={styles.sectionLabel}>ALL UPCOMING SESSIONS</Text>
-        {Object.entries(sessions)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([date, entries]) =>
-            entries.map((entry, i) => {
-              const isExam = entry.type === 'exam';
-              return (
-                <TouchableOpacity
-                  key={`${date}-${i}`}
-                  style={[styles.sessionRow, { borderLeftColor: entry.color }]}
-                  onPress={() => setSelectedDate(date)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.sessionEmoji}>{isExam ? '🎓' : '📖'}</Text>
-                  <View style={styles.sessionInfo}>
-                    <Text style={styles.sessionName}>{entry.name}</Text>
-                    <Text style={styles.sessionDate}>
-                      {new Date(date + 'T00:00:00').toLocaleDateString('en-ZA', {
-                        weekday: 'short', day: 'numeric', month: 'short',
-                      })}
-                      {isExam ? ' · Exam day 🎉' : ` · ${entry.daysBeforeExam} days before exam`}
-                    </Text>
-                  </View>
-                  {isExam && (
-                    <View style={[styles.examBadge, { backgroundColor: entry.color }]}>
-                      <Text style={styles.examBadgeText}>EXAM</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })
-          )}
+        <SessionList
+          sessions={sortedSessions}
+          onSelect={setSelectedDate}
+        />
 
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+
+const Header = () => (
+  <View style={styles.header}>
+    <Text style={styles.greeting}>Welcome back 👋</Text>
+    <Text style={styles.title}>Let’s study smart</Text>
+  </View>
+);
+
+const TodayCard = ({ sessions }) => (
+  <View style={styles.todayCard}>
+    <Text style={styles.sectionLabel}>TODAY</Text>
+
+    {sessions.length === 0 ? (
+      <Text style={styles.todayEmpty}>
+        You’re all caught up 🎉
+      </Text>
+    ) : (
+      sessions.map((s, i) => (
+        <Text key={i} style={styles.todayItem}>
+          📖 {s.name}
+        </Text>
+      ))
+    )}
+  </View>
+);
+
+const NextCard = ({ session }) => {
+  const [date, entries] = session;
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.sectionLabel}>NEXT UP</Text>
+
+      <Text style={styles.cardTitle}>
+        {entries[0]?.name}
+      </Text>
+
+      <Text style={styles.cardSub}>
+        {date}
+      </Text>
+    </View>
+  );
+};
+
+const CalendarCard = ({ marking, onSelect }) => (
+  <View style={styles.card}>
+    <Calendar
+      markingType="multi-dot"
+      markedDates={marking}
+      onDayPress={(d) => onSelect(d.dateString)}
+      current={todayString()}
+      theme={{
+        selectedDayBackgroundColor: "#111",
+        todayTextColor: "#7C3AED",
+        arrowColor: "#111",
+      }}
+    />
+  </View>
+);
+
+const SessionList = ({ sessions, onSelect }) => (
+  <View style={{ marginTop: 10 }}>
+    <Text style={styles.sectionTitle}>All Sessions</Text>
+
+    {sessions.map(([date, entries]) =>
+      entries.map((entry, i) => (
+        <TouchableOpacity
+          key={`${date}-${i}`}
+          style={styles.listItem}
+          onPress={() => onSelect(date)}
+        >
+          <View>
+            <Text style={styles.itemTitle}>
+              {entry.type === "exam" ? "🎓" : "📖"} {entry.name}
+            </Text>
+            <Text style={styles.itemSub}>{date}</Text>
+          </View>
+
+          {entry.type === "exam" && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>EXAM</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ))
+    )}
+  </View>
+);
+
+
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFBF5' },
-  scroll: { flex: 1 },
-  content: { padding: 22, paddingBottom: 48 },
+  safe: { flex: 1, backgroundColor: "#FAFAF9" },
+
+  container: { padding: 20, paddingBottom: 40 },
 
   header: { marginBottom: 20 },
-  backBtn: { marginBottom: 10 },
-  backText: { fontSize: 14, color: '#7C3AED', fontWeight: '700' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontSize: 34, fontWeight: '800', color: '#1C1917', letterSpacing: -1 },
-  titleEmoji: { fontSize: 30 },
-  subtitle: { fontSize: 14, color: '#78716C', marginTop: 4 },
-
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statCard: { flex: 1, borderRadius: 14, padding: 12, alignItems: 'center', gap: 2 },
-  statEmoji: { fontSize: 18 },
-  statVal: { fontSize: 22, fontWeight: '800', color: '#1C1917' },
-  statLbl: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-
-  legendWrap: { marginBottom: 14 },
-  legendTitle: { fontSize: 10, fontWeight: '700', color: '#A8A29E', letterSpacing: 1.2, marginBottom: 8 },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  legendItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1.5, borderColor: '#F5F5F4',
-  },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 12, fontWeight: '600', color: '#1C1917', maxWidth: 100 },
-
-  calendarWrap: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 4,
-    borderWidth: 2,
-    borderColor: '#F5F5F4',
-    backgroundColor: '#FFFFFF',
-  },
-  calendar: { borderRadius: 20 },
+  greeting: { color: "#6B7280", fontSize: 14 },
+  title: { fontSize: 30, fontWeight: "800", marginTop: 4 },
 
   sectionLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#A8A29E',
-    letterSpacing: 1.2,
-    marginTop: 22,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#9CA3AF",
+    marginBottom: 6,
+  },
+
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
     marginBottom: 10,
   },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    gap: 12,
-    borderWidth: 1.5,
-    borderColor: '#F5F5F4',
+
+  todayCard: {
+    backgroundColor: "#111827",
+    padding: 18,
+    borderRadius: 18,
+    marginBottom: 16,
   },
-  sessionEmoji: { fontSize: 20 },
-  sessionInfo: { flex: 1 },
-  sessionName: { fontSize: 14, fontWeight: '700', color: '#1C1917' },
-  sessionDate: { fontSize: 12, color: '#78716C', marginTop: 2, fontWeight: '500' },
-  examBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  examBadgeText: { fontSize: 9, fontWeight: '800', color: '#1C1917', letterSpacing: 0.5 },
+
+  todayItem: {
+    color: "#fff",
+    fontSize: 15,
+    marginTop: 6,
+  },
+
+  todayEmpty: {
+    color: "#fff",
+    fontSize: 16,
+    marginTop: 6,
+    fontWeight: "600",
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E7E5E4",
+  },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+
+  cardSub: {
+    color: "#6B7280",
+    marginTop: 2,
+  },
+
+  listItem: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  itemTitle: { fontWeight: "600" },
+  itemSub: { color: "#6B7280", fontSize: 12 },
+
+  badge: {
+    backgroundColor: "#7C3AED20",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+
+  badgeText: {
+    color: "#7C3AED",
+    fontSize: 10,
+    fontWeight: "700",
+  },
 });

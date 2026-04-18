@@ -21,7 +21,8 @@
     },
     "scheme": "study-timetable",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-community/datetimepicker"
     ]
   }
 }
